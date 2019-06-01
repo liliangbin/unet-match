@@ -1,13 +1,14 @@
 # -*- coding:utf-8 -*-
 
-from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
-import numpy as np
 import glob
-import SimpleITK as sitk
-from matplotlib import pyplot as plt
 import os
+
+import SimpleITK as sitk
+import numpy as np
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
+from keras.preprocessing.image import img_to_array, load_img
+from matplotlib import pyplot as plt
 
 # 指定第一块GPU可用
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # 指定GPU的第二种方法
@@ -20,7 +21,7 @@ set_session(tf.Session(config=config))
 
 
 def to_hu(image):
-    MIN_BLOOD = -1000
+    MIN_BLOOD = -10
     MAX_BLOOD = 400
     image = (image - MIN_BLOOD) / (MAX_BLOOD - MIN_BLOOD)
     image[image > 1] = 1.
@@ -33,7 +34,7 @@ print('Creating training images...')
 print('-' * 30)
 train_path = "../train/dataset/"
 cnt = 1000
-for j in range(1, 109):
+for j in range(74, 109):
     number = cnt + j
     filname = str(number)
     file = train_path + filname + "/venous phase/200"
@@ -55,6 +56,8 @@ for j in range(1, 109):
         name = file + numname + ".dcm"
         pngname = file + numname + "_mask.png"
         print("dcmname===>" + name + "\n" + "pngname==>" + pngname)
+        if not os.path.exists(name):
+            continue
         image = sitk.ReadImage(name)
         image_array = sitk.GetArrayFromImage(image)  # z, y, x
         print(image_array.shape)
@@ -64,12 +67,13 @@ for j in range(1, 109):
         # 维数变化
         print(image_array.shape)
 
-        image_array = to_hu(image_array)
+        image_array = to_hu(image_array) * 2
+        image_array[image_array > 1] = 1.
         images = np.squeeze(image_array)
 
         plt.imshow(images, cmap="gray")
         plt.axis("off")
-        plt.savefig(name + "_new.png")
+        #plt.savefig(name + "_new.png")
         print("image_array done")
         # plt.show()
         imgdatas[i - 1] = image_array

@@ -1,23 +1,14 @@
 from keras.callbacks import ModelCheckpoint
-from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout
+from keras.layers import concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout
 from keras.models import *
 from keras.optimizers import *
-import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
 
 from data import *
 
-# 指定第一块GPU可用
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # 指定GPU的第二种方法
-
-config = tf.ConfigProto()
-config.gpu_options.allocator_type = 'BFC'  # A "Best-fit with coalescing" algorithm, simplified from a version of dlmalloc.
-config.gpu_options.per_process_gpu_memory_fraction = 0.9  # 定量
-config.gpu_options.allow_growth = True  # 按需
-set_session(tf.Session(config=config))
+import os
+import tensorflow as tf
 
 
-# import data
 class myUnet(object):
 
     def __init__(self, img_rows=512, img_cols=512):
@@ -96,19 +87,20 @@ class myUnet(object):
 
     def train(self, file_path):
         print("loading data")
+
         imgs_train, imgs_mask_train = self.load_train_data(file_path)
         print("loading data done")
 
         if not os.path.exists("unet.hdf5"):
-            print("not a model   ")
+            print("not a model  and can not load it so we create it   ")
             model = self.get_unet()
         else:
             model = load_model("unet.hdf5")
-            print("have a model")
+            print("have a model  and  load it ")
 
         model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='loss', verbose=1, save_best_only=True)
         print('Fitting model...')
-        model.fit(imgs_train, imgs_mask_train, batch_size=4, nb_epoch=100, verbose=1, validation_split=0.2,
+        model.fit(imgs_train, imgs_mask_train, batch_size=5, epochs=100, verbose=1, validation_split=0.2,
                   shuffle=True,
                   callbacks=[model_checkpoint])
 
@@ -134,14 +126,26 @@ class myUnet(object):
 
 
 if __name__ == '__main__':
-    cnt = 1000
 
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    from keras.backend.tensorflow_backend import set_session
+
+    config = tf.ConfigProto()
+    config.gpu_options.per_process_gpu_memory_fraction = 0.8
+    set_session(tf.Session(config=config))
+
+    cnt = 1000
     files = "../train/npy/"
     myunet = myUnet()
     file_path = ""
     for i in range(1, 109):
         temp = cnt + i
         file_path = files + str(temp)
+        file = file_path + "_imgs_train.npy"
+        if not os.path.exists(file):
+            print("file_path%s is not exists " % file)
+            continue
+        print("%s this file is exists "%file)
         myunet.train(file_path)
     # myunet.prediect('train/1119')
     # myunet.save_img()
