@@ -2,6 +2,7 @@ from keras.callbacks import ModelCheckpoint
 from keras.layers import concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout
 from keras.models import *
 from keras.optimizers import *
+import logging
 
 from data import *
 
@@ -100,11 +101,10 @@ class myUnet(object):
 
         model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='loss', verbose=1, save_best_only=True)
         print('Fitting model...')
-        model.fit(imgs_train, imgs_mask_train, batch_size=5, epochs=100, verbose=1, validation_split=0.2,
+        model.fit(imgs_train, imgs_mask_train, batch_size=4, epochs=100, verbose=1, validation_split=0.2,
                   shuffle=True,
                   callbacks=[model_checkpoint])
 
-        model.save("unet.h5")
         print("fitting done ")
 
     def prediect(self, file_path):
@@ -131,14 +131,22 @@ if __name__ == '__main__':
     from keras.backend.tensorflow_backend import set_session
 
     config = tf.ConfigProto()
-    config.gpu_options.per_process_gpu_memory_fraction = 0.8
+    config.gpu_options.per_process_gpu_memory_fraction = 0.9
+    config.gpu_options.allow_growth = True  # 程序按需申请内存
+
     set_session(tf.Session(config=config))
+
+    logging.basicConfig(
+        filename='app.log',
+        level=logging.DEBUG,
+        format='%(asctime)s:%(levelname)s:%(message)s'
+    )
 
     cnt = 1000
     files = "../train/npy/"
     myunet = myUnet()
     file_path = ""
-    for i in range(1, 109):
+    for i in range(44, 109):
         temp = cnt + i
         file_path = files + str(temp)
         file = file_path + "_imgs_train.npy"
@@ -146,6 +154,8 @@ if __name__ == '__main__':
             print("file_path%s is not exists " % file)
             continue
         print("%s this file is exists "%file)
+        logging.debug(file)
+
         myunet.train(file_path)
     # myunet.prediect('train/1119')
     # myunet.save_img()
